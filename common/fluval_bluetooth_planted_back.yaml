@@ -1,0 +1,314 @@
+substitutions:
+  mac_address_planted_back: '00:00:00:00:00:00'
+
+esphome:
+  on_boot:
+    priority: 600
+    then:
+      - delay: 2s
+      - switch.turn_on: planted_ble_connection_switch_back
+
+ble_client:
+  - mac_address: ${mac_address_planted_back}
+    id: ble_fluval_planted_back
+    auto_connect: true
+    on_connect:
+      then:
+        - binary_sensor.template.publish:
+            id: planted_connection_back
+            state: ON
+        - lambda: |-
+            ESP_LOGD("ble_client_lambda", "Connected to BLE device (back)");
+    on_disconnect:
+      then:
+        - binary_sensor.template.publish:
+            id: planted_connection_back
+            state: OFF
+        - lambda: |-
+            ESP_LOGD("ble_client_lambda", "Disconnected from BLE device (back)");
+
+esp32_ble_tracker:
+  on_ble_advertise:
+    - mac_address:
+        - ${mac_address_planted_back}
+      then:
+        - lambda: |-
+            ESP_LOGD("ble_adv", "New BLE device (back)");
+            ESP_LOGD("ble_adv", "  address: %s", x.address_str().c_str());
+            ESP_LOGD("ble_adv", "  name: %s", x.get_name().c_str());
+            ESP_LOGD("ble_adv", "  Advertised service UUIDs:");
+            for (auto uuid : x.get_service_uuids()) {
+                ESP_LOGD("ble_adv", "    - %s", uuid.to_string().c_str());
+            }
+            ESP_LOGD("ble_adv", "  Advertised service data:");
+            for (auto data : x.get_service_datas()) {
+                ESP_LOGD("ble_adv", "    - %s: (length %i)", data.uuid.to_string().c_str(), data.data.size());
+            }
+            ESP_LOGD("ble_adv", "  Advertised manufacturer data:");
+            for (auto data : x.get_manufacturer_datas()) {
+                ESP_LOGD("ble_adv", "    - %s: (length %i)", data.uuid.to_string().c_str(), data.data.size());
+            }
+
+binary_sensor:
+  - platform: ble_presence
+    mac_address: ${mac_address_planted_back}
+    name: "Planted Presence (Back)"
+    id: planted_presence_back
+    entity_category: "diagnostic"
+    device_class: presence
+
+  - platform: template
+    name: "Planted BLE Connection (Back)"
+    id: planted_connection_back
+    entity_category: "diagnostic"
+    device_class: connectivity
+    lambda: |-
+      return {};
+
+fluval_ble_led:
+  - ble_client_id: ble_fluval_planted_back
+    time_id: ha_time
+    number_of_channels: 5
+    id: fluval_planted_back
+
+sensor:
+  - platform: ble_rssi
+    mac_address: ${mac_address_planted_back}
+    name: "Planted Light Signal (Back)"
+    id: bluetooth_signal_planted_back
+    disabled_by_default: true
+    entity_category: "diagnostic"
+
+  - platform: copy
+    source_id: bluetooth_signal_planted_back
+    name: "Planted Light Signal Strength (Back)"
+    filters:
+      - lambda: return min(max(2 * (x + 100.0), 0.0), 100.0);
+    unit_of_measurement: "%"
+    entity_category: "diagnostic"
+
+  - platform: fluval_ble_led
+    fluval_ble_led_id: fluval_planted_back
+    channel: 1
+    zero_if_off: true
+    name: "Planted - Pink (Back)"
+    id: fluval_planted_pink_back
+    disabled_by_default: true
+
+  - platform: copy
+    name: "Planted - Pink Brightness (Back)"
+    source_id: fluval_planted_pink_back
+    unit_of_measurement: '%'
+    filters:
+      - calibrate_linear:
+          method: least_squares
+          datapoints:
+            - 0.0 -> 0.0
+            - 1000.0 -> 100.0
+
+  - platform: fluval_ble_led
+    fluval_ble_led_id: fluval_planted_back
+    channel: 2
+    zero_if_off: true
+    name: "Planted - Blue (Back)"
+    id: fluval_planted_blue_back
+    disabled_by_default: true
+
+  - platform: copy
+    name: "Planted - Blue Brightness (Back)"
+    source_id: fluval_planted_blue_back
+    unit_of_measurement: '%'
+    filters:
+      - calibrate_linear:
+          method: least_squares
+          datapoints:
+            - 0.0 -> 0.0
+            - 1000.0 -> 100.0
+
+  - platform: fluval_ble_led
+    fluval_ble_led_id: fluval_planted_back
+    channel: 3
+    zero_if_off: true
+    name: "Planted - Cold White (Back)"
+    id: fluval_planted_cold_white_back
+    disabled_by_default: true
+
+  - platform: copy
+    name: "Planted - Cold White Brightness (Back)"
+    source_id: fluval_planted_cold_white_back
+    unit_of_measurement: '%'
+    filters:
+      - calibrate_linear:
+          method: least_squares
+          datapoints:
+            - 0.0 -> 0.0
+            - 1000.0 -> 100.0
+
+  - platform: fluval_ble_led
+    fluval_ble_led_id: fluval_planted_back
+    channel: 4
+    zero_if_off: true
+    name: "Planted - Pure White (Back)"
+    id: fluval_planted_pure_white_back
+    disabled_by_default: true
+
+  - platform: copy
+    name: "Planted - Pure White Brightness (Back)"
+    source_id: fluval_planted_pure_white_back
+    unit_of_measurement: '%'
+    filters:
+      - calibrate_linear:
+          method: least_squares
+          datapoints:
+            - 0.0 -> 0.0
+            - 1000.0 -> 100.0
+
+  - platform: fluval_ble_led
+    fluval_ble_led_id: fluval_planted_back
+    channel: 5
+    zero_if_off: true
+    name: "Planted - Warm White (Back)"
+    id: fluval_planted_warm_white_back
+    disabled_by_default: true
+
+  - platform: copy
+    name: "Planted - Warm White Brightness (Back)"
+    source_id: fluval_planted_warm_white_back
+    unit_of_measurement: '%'
+    filters:
+      - calibrate_linear:
+          method: least_squares
+          datapoints:
+            - 0.0 -> 0.0
+            - 1000.0 -> 100.0
+
+button:
+  - platform: fluval_ble_led
+    fluval_ble_led_id: fluval_planted_back
+    mode: "MANUAL"
+    name: "Planted - Switch to Manual (Back)"
+    icon: mdi:lightbulb-alert
+    id: switch_manual_planted_back
+
+  - platform: fluval_ble_led
+    fluval_ble_led_id: fluval_planted_back
+    mode: "AUTO"
+    name: "Planted - Switch to Auto (Back)"
+    icon: mdi:lightbulb-auto
+    id: switch_auto_planted_back
+
+  - platform: fluval_ble_led
+    fluval_ble_led_id: fluval_planted_back
+    mode: "PRO"
+    name: "Planted - Switch to Pro (Back)"
+    icon: mdi:lightbulb-on
+    id: switch_pro_planted_back
+
+switch:
+  - platform: ble_client
+    ble_client_id: ble_fluval_planted_back
+    name: "Planted Bluetooth Connection (Back)"
+    id: planted_ble_connection_switch_back
+    restore_mode: RESTORE_DEFAULT_ON
+
+  # Gated switch (won't try to write while disconnected)
+  - platform: template
+    name: "Planted Light (Back)"
+    id: planted_light_gate_back
+    restore_mode: RESTORE_DEFAULT_ON
+    icon: mdi:flower
+    lambda: |-
+      return id(planted_connection_back).state;
+    turn_on_action:
+      - if:
+          condition:
+            binary_sensor.is_on: planted_connection_back
+          then:
+            - switch.turn_on: planted_light_raw_back
+    turn_off_action:
+      - if:
+          condition:
+            binary_sensor.is_on: planted_connection_back
+          then:
+            - switch.turn_off: planted_light_raw_back
+
+  # Raw Fluval switch (kept diagnostic)
+  - platform: fluval_ble_led
+    fluval_ble_led_id: fluval_planted_back
+    name: "Planted Light (Raw) (Back)"
+    id: planted_light_raw_back
+    restore_mode: RESTORE_DEFAULT_ON
+    icon: mdi:flower
+    entity_category: diagnostic
+
+text_sensor:
+  - platform: fluval_ble_led
+    fluval_ble_led_id: fluval_planted_back
+    mapping_manual: "Manual"
+    mapping_auto: "Auto"
+    mapping_pro: "Pro"
+    name: "Planted Light Mode (Back)"
+    icon: mdi:lightbulb-group
+    id: fluval_planted_mode_back
+
+number:
+  - platform: fluval_ble_led
+    fluval_ble_led_id: fluval_planted_back
+    name: "Planted - Pink (Back)"
+    channel: 1
+    zero_if_off: true
+    step: 10
+
+  - platform: fluval_ble_led
+    fluval_ble_led_id: fluval_planted_back
+    name: "Planted - Blue (Back)"
+    channel: 2
+    zero_if_off: true
+    step: 10
+
+  - platform: fluval_ble_led
+    fluval_ble_led_id: fluval_planted_back
+    name: "Planted - Cold White (Back)"
+    channel: 3
+    zero_if_off: true
+    step: 10
+
+  - platform: fluval_ble_led
+    fluval_ble_led_id: fluval_planted_back
+    name: "Planted - Pure White (Back)"
+    channel: 4
+    zero_if_off: true
+    step: 10
+
+  - platform: fluval_ble_led
+    fluval_ble_led_id: fluval_planted_back
+    name: "Planted - Warm White (Back)"
+    channel: 5
+    zero_if_off: true
+    step: 10
+
+select:
+  - platform: template
+    name: "Planted Mode Select (Back)"
+    id: fluval_planted_mode_select_back
+    icon: mdi:auto-mode
+    options:
+      - Manual
+      - Auto
+      - Pro
+    lambda: |-
+      auto s = id(fluval_planted_mode_back).state;
+      if (s == "Manual" || s == "Auto" || s == "Pro") return s;
+      return std::string("Auto");
+    set_action:
+      then:
+        - lambda: |-
+            if (x == "Manual") {
+              id(switch_manual_planted_back).press();
+            }
+            if (x == "Auto") {
+              id(switch_auto_planted_back).press();
+            }
+            if (x == "Pro") {
+              id(switch_pro_planted_back).press();
+            }
