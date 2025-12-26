@@ -20,6 +20,13 @@ ble_client:
         - lambda: |-
             ESP_LOGD("ble_client_lambda", "Disconnected from BLE device");
 
+esphome:
+  on_boot:
+    priority: 600
+    then:
+      - delay: 2s
+      - switch.turn_on: planted_ble_connection_switch
+
 esp32_ble_tracker:
   on_ble_advertise:
     - mac_address:
@@ -214,14 +221,37 @@ switch:
   - platform: ble_client
     ble_client_id: ble_fluval_planted
     name: "Planted Bluetooth Connection"
+    id: planted_ble_connection_switch
     restore_mode: RESTORE_DEFAULT_ON
+
+  - platform: template
+    name: "Planted Light"
+    id: planted_light_gate
+    restore_mode: RESTORE_DEFAULT_ON
+    icon: mdi:flower
+    lambda: |-
+      return id(planted_connection).state;
+    turn_on_action:
+      - if:
+          condition:
+            binary_sensor.is_on: planted_connection
+          then:
+            - switch.turn_on: planted_light_raw
+    turn_off_action:
+      - if:
+          condition:
+            binary_sensor.is_on: planted_connection
+          then:
+            - switch.turn_off: planted_light_raw
 
   - platform: fluval_ble_led
     fluval_ble_led_id: fluval_planted
-    name: "Planted Light"
+    name: "Planted Light (Raw)"
+    id: planted_light_raw
     restore_mode: RESTORE_DEFAULT_ON
     icon: mdi:flower
-
+    entity_category: diagnostic
+    
 text_sensor:
   - platform: fluval_ble_led
     fluval_ble_led_id: fluval_planted
@@ -277,7 +307,10 @@ select:
       - Manual
       - Auto
       - Pro
-    lambda: return id(fluval_planted_mode).state;
+    lambda: |-
+      auto s = id(fluval_planted_mode).state;
+      if (s == "Manual" || s == "Auto" || s == "Pro") return s;
+      return std::string("Auto");
     set_action:
       then:
         - lambda: |-
